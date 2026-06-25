@@ -13,8 +13,16 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
 		</http:listener-connection>
 	</http:listener-config>
 	<http:request-config name="HTTP_Request_Process_Config">
-		<http:request-connection host="${process.host}" port="${process.port}" />
+		<http:request-connection host="${process.host}" port="${process.port}" protocol="HTTPS">
+
+			<tls:context>
+				<tls:trust-store path="${tls.context.keystore.path}" password="${tls.context.keystore.password}" type="${tls.context.keystore.type}" />
+			</tls:context>
+
+		</http:request-connection>
 	</http:request-config>
+
+
 	<apikit:config name="customer-experience-api-config" api="resource::38cd32ec-dbaf-4d31-bc6e-25087cbf3c52:customer-experience-api:1.0.0:raml:zip:customer-experience-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
 	<flow name="customer-experience-api-main">
 		<http:listener config-ref="customer-experience-api-httpListenerConfig" path="/api/*">
