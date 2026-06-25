@@ -2,7 +2,7 @@
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
-	<configuration-properties file="config-${env}.yaml"/>
+	<configuration-properties file="config-${env}.yaml" />
 	<http:listener-config name="customer-experience-api-httpListenerConfig">
 		<http:listener-connection host="0.0.0.0" port="${http.port}" />
 	</http:listener-config>
@@ -20,6 +20,10 @@
 				<http:headers>#[vars.outboundHeaders default {}]</http:headers>
 			</http:error-response>
 		</http:listener>
+		<!-- Unique CorrelationId for AWS CloudWatch logs: just search the corrrelationId and you will get logs from all layers -->
+		<set-variable variableName="correlationId" value="#[correlationId default uuid()]" />
+		<logger level="INFO" message="START EXPERIENCE - correlationId: #[vars.correlationId]" />
+
 		<apikit:router config-ref="customer-experience-api-config" />
 		<error-handler>
 			<on-error-propagate type="APIKIT:BAD_REQUEST">
@@ -108,34 +112,6 @@ output application/json
 			</on-error-propagate>
 		</error-handler>
 	</flow>
-	<flow name="customer-experience-api-console">
-		<http:listener config-ref="customer-experience-api-httpListenerConfig" path="/console/*">
-			<http:response statusCode="#[vars.httpStatus default 200]">
-				<http:headers>#[vars.outboundHeaders default {}]</http:headers>
-			</http:response>
-			<http:error-response statusCode="#[vars.httpStatus default 500]">
-				<http:body>#[payload]</http:body>
-				<http:headers>#[vars.outboundHeaders default {}]</http:headers>
-			</http:error-response>
-		</http:listener>
-		<apikit:console config-ref="customer-experience-api-config" />
-		<error-handler>
-			<on-error-propagate type="APIKIT:NOT_FOUND">
-				<ee:transform doc:name="Transform Message">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{message: "Resource not found"}]]></ee:set-payload>
-					</ee:message>
-					<ee:variables>
-						<ee:set-variable variableName="httpStatus">404
-						</ee:set-variable>
-					</ee:variables>
-				</ee:transform>
-			</on-error-propagate>
-		</error-handler>
-	</flow>
 	<flow name="put:\customers\(id):application\json:customer-experience-api-config">
 
 		<!-- Extract ID -->
@@ -153,10 +129,18 @@ output application/json
 		<!-- CALL PROCESS API -->
 		<http:request method="PUT" doc:name="Call Process API - Update Customer" config-ref="HTTP_Request_Process_Config" path="/api/customers/{id}">
 
+
 			<!-- BODY FIRST -->
 			<http:body>
         		<![CDATA[#[payload]]]>
     		</http:body>
+
+			<!-- Passing correlationId to next layer -->
+			<http:headers>
+   			 #[{
+    		    "X-Correlation-ID": vars.correlationId
+  			  }]
+			</http:headers>
 
 			<!-- URI PARAMS AFTER -->
 			<http:uri-params>
@@ -175,6 +159,14 @@ output application/json
 		<logger level="INFO" message="DELETE customer id: #[vars.id]" />
 
 		<http:request method="DELETE" config-ref="HTTP_Request_Process_Config" path="api/customers/{id}">
+		
+			<!-- Passing correlationId to next layer -->
+			<http:headers>
+   			 #[{
+    		    "X-Correlation-ID": vars.correlationId
+  			  }]
+			</http:headers>
+		
 
 			<http:uri-params><![CDATA[#[{ id: vars.id }]]]></http:uri-params>
 
@@ -185,7 +177,17 @@ output application/json
 
 		<logger level="INFO" message="GET all customers" />
 
-		<http:request method="GET" config-ref="HTTP_Request_Process_Config" path="/api/customers" />
+		<http:request method="GET" config-ref="HTTP_Request_Process_Config" path="/api/customers">
+		
+			<!-- Passing correlationId to next layer -->
+			<http:headers>
+   			 #[{
+    		    "X-Correlation-ID": vars.correlationId
+  			  }]
+			</http:headers>
+			
+		</http:request>
+		
 
 	</flow>
 	<flow name="get:\customers\(id):customer-experience-api-config">
@@ -195,6 +197,15 @@ output application/json
 		<logger level="INFO" message="GET customer id: #[vars.id]" />
 
 		<http:request method="GET" config-ref="HTTP_Request_Process_Config" path="/api/customers/{id}">
+		
+			
+			<!-- Passing correlationId to next layer -->
+			<http:headers>
+   			 #[{
+    		    "X-Correlation-ID": vars.correlationId
+  			  }]
+			</http:headers>
+			
 
 			<http:uri-params><![CDATA[#[{ id: vars.id }]]]></http:uri-params>
 
@@ -208,6 +219,14 @@ output application/json
 		<http:request method="POST" config-ref="HTTP_Request_Process_Config" path="/api/customers">
 
 			<http:body><![CDATA[#[payload]]]></http:body>
+			
+			<!-- Passing correlationId to next layer -->
+			<http:headers>
+   			 #[{
+    		    "X-Correlation-ID": vars.correlationId
+  			  }]
+			</http:headers>
+			
 
 		</http:request>
 
