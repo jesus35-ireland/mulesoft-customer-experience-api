@@ -17,15 +17,8 @@
     </http:request-config>
     <apikit:config name="customer-experience-api-config" api="resource::38cd32ec-dbaf-4d31-bc6e-25087cbf3c52:customer-experience-api:3.0.0:raml:zip:customer-experience-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <flow name="customer-experience-api-main">
-        <http:listener config-ref="customer-experience-api-httpListenerConfig" path="/api/*">
-            <http:response statusCode="#[vars.httpStatus default 200]">
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
-            </http:response>
-            <http:error-response statusCode="#[vars.httpStatus default 500]">
-                <http:body>#[payload]</http:body>
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
-            </http:error-response>
-        </http:listener>
+        <http:listener config-ref="customer-experience-api-httpListenerConfig" path="/api/*" />
+
         <!-- Unique CorrelationId for AWS CloudWatch logs: just search the corrrelationId and you will get logs from all layers -->
         <set-variable variableName="correlationId" value="#[correlationId default uuid()]" />
         <logger level="INFO" message="START EXPERIENCE - correlationId: #[vars.correlationId]" />
@@ -109,6 +102,24 @@ output application/json
                     </ee:variables>
                 </ee:transform>
             </on-error-propagate>
+            <on-error-propagate type="MULE:ANY">
+
+				<set-variable variableName="httpStatus" value="404" />
+
+				<logger level="ERROR" message="Bad input, please contact admin" />
+
+				<ee:transform>
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Bad input, please contact admin"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+
+			</on-error-propagate>
         </error-handler>
     </flow>
     <flow name="put:\customers\(id):application\json:customer-experience-api-config">
