@@ -1,13 +1,8 @@
-https:
+http:
   host: "0.0.0.0"
   port: "8081"
-tls:
-  context:
-    keystore:
-      path: "keystore.jks"
-      keyPassword: "changeit"
-      password: "changeit"
-      type: "jks"
+  
 process:
   host: "localhost"
   port: "8082"
+  protocol: "HTTP"

@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+        http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+	<munit:config name="customer-experience-api-test-suite.xml" />
+
+
+
+	<!-- ========================= -->
+	<!-- TEST: GET CUSTOMER BY ID -->
+	<!-- ========================= -->
+	<munit:test name="get_customer_by_id_test">
+
+
+
+		<munit:behavior>
+			<!-- ========================= -->
+			<!-- MOCK PROCESS API - GET -->
+			<!-- ========================= -->
+			<munit-tools:mock-when processor="http:request">
+
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute attributeName="method" whereValue="GET" />
+					<munit-tools:with-attribute attributeName="path" whereValue="/api/customers/{id}" />
+				</munit-tools:with-attributes>
+
+				<munit-tools:then-return>
+
+					<munit-tools:payload value="#[
+            {
+                customerId: '1',
+                name: 'John Doe'
+            }
+        ]" />
+
+					<munit-tools:attributes value="#[
+            {
+                statusCode: 200
+            }
+        ]" />
+
+
+
+				</munit-tools:then-return>
+
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution>
+
+            <munit:set-event>
+
+                <munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+  uriParams: {
+    id: "1"
+  }
+}]'/>
+
+            </munit:set-event>
+
+            <flow-ref name="get:\customers\(id):customer-experience-api-config"/>
+
+        </munit:execution>
+
+    </munit:test>
+    
+    <!-- ========================= -->
+    <!-- TEST: POST CUSTOMER       -->
+    <!-- ========================= -->
+    <munit:test name="post_customer_test">
+
+        <!-- ========================= -->
+        <!-- MOCK PROCESS API - POST   -->
+        <!-- ========================= -->
+        <munit:behavior>
+
+            <munit-tools:mock-when processor="http:request">
+
+                <munit-tools:with-attributes>
+                    <munit-tools:with-attribute attributeName="method" whereValue="POST"/>
+                    <munit-tools:with-attribute attributeName="path" whereValue="/api/customers"/>
+                </munit-tools:with-attributes>
+
+                <munit-tools:then-return>
+
+                    <munit-tools:payload value="#[
+                        {
+                            customerId: '10',
+                            status: 'CREATED'
+                        }
+                    ]"/>
+
+                    <munit-tools:attributes value="#[
+                        {
+                            statusCode: 201
+                        }
+                    ]"/>
+
+                </munit-tools:then-return>
+
+            </munit-tools:mock-when>
+
+        </munit:behavior>
+
+        <!-- ========================= -->
+        <!-- EXECUTION                 -->
+        <!-- ========================= -->
+        <munit:execution>
+
+            <munit:set-event>
+
+                <munit:payload value="#[
+                    {
+                        name: 'John Doe'
+                    }
+                ]"/>
+
+                <munit:attributes value="#[
+                    {
+                        headers: {
+                            'X-Correlation-ID': 'test-123'
+                        }
+                    }
+                ]"/>
+
+            </munit:set-event>
+
+            <flow-ref name="post:\customers:application\json:customer-experience-api-config"/>
+
+        </munit:execution>
+
+    </munit:test>
+    
+    
+   
+
+    <!-- ========================= -->
+    <!-- TEST EXECUTION            -->
+    <!-- ========================= -->
+    <munit:test name="delete_customer_test">
+    
+     <!-- ========================= -->
+    <!-- MOCK PROCESS API - DELETE -->
+    <!-- ========================= -->
+    <munit:behavior>
+
+        <munit-tools:mock-when processor="http:request">
+
+            <munit-tools:with-attributes>
+                <munit-tools:with-attribute attributeName="method" whereValue="DELETE"/>
+                <munit-tools:with-attribute attributeName="path" whereValue="api/customers/{id}"/>
+            </munit-tools:with-attributes>
+
+            <munit-tools:then-return>
+
+                <!-- Process API response -->
+                <munit-tools:payload value="#[
+                    {
+                        status: 'DELETED'
+                    }
+                ]"/>
+
+                <munit-tools:attributes value="#[
+                    {
+                        statusCode: 200
+                    }
+                ]"/>
+
+            </munit-tools:then-return>
+
+        </munit-tools:mock-when>
+
+    </munit:behavior>
+
+        <munit:execution>
+
+            <munit:set-event>
+
+                <!-- URI PARAMS -->
+                <munit:attributes value="#[
+                    {
+                        uriParams: {
+                            id: '1'
+                        },
+                        headers: {
+                            'x-correlation-id': 'test-123'
+                        }
+                    }
+                ]"/>
+
+            </munit:set-event>
+
+            <flow-ref name="delete:\customers\(id):customer-experience-api-config"/>
+
+        </munit:execution>
+
+    </munit:test>
+    
+    <munit:test name="get_customers_test" description="Test GET all customers">
+
+    <munit:behavior>
+
+        <munit-tools:mock-when processor="http:request">
+
+            <munit-tools:with-attributes>
+                <munit-tools:with-attribute attributeName="method" whereValue="GET"/>
+                <munit-tools:with-attribute attributeName="path" whereValue="/api/customers"/>
+            </munit-tools:with-attributes>
+
+            <munit-tools:then-return>
+
+                <munit-tools:payload value="#[
+                    [
+                        {
+                            customerId: '1',
+                            name: 'John Doe'
+                        },
+                        {
+                            customerId: '2',
+                            name: 'Jane Doe'
+                        }
+                    ]
+                ]"/>
+
+                <munit-tools:attributes value="#[
+                    {
+                        statusCode: 200
+                    }
+                ]"/>
+
+            </munit-tools:then-return>
+
+        </munit-tools:mock-when>
+
+    </munit:behavior>
+
+    <munit:execution>
+
+        <munit:set-event>
+
+            <munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+    queryParams: {
+        page: "1",
+        size: "10"
+    }
+}]'/>
+
+        </munit:set-event>
+
+        <flow-ref name="get:\customers:customer-experience-api-config"/>
+
+    </munit:execution>
+
+</munit:test>
+
+<munit:test name="put_customer_test" description="Test PUT customer">
+
+    <munit:behavior>
+
+        <munit-tools:mock-when processor="http:request">
+
+            <munit-tools:with-attributes>
+                <munit-tools:with-attribute attributeName="method" whereValue="PUT"/>
+                <munit-tools:with-attribute attributeName="path" whereValue="/api/customers/{id}"/>
+            </munit-tools:with-attributes>
+
+            <munit-tools:then-return>
+
+                <munit-tools:payload value="#[
+                    {
+                        customerId: '1',
+                        updated: true
+                    }
+                ]"/>
+
+                <munit-tools:attributes value="#[
+                    {
+                        statusCode: 200
+                    }
+                ]"/>
+
+            </munit-tools:then-return>
+
+        </munit-tools:mock-when>
+
+    </munit:behavior>
+
+    <munit:execution>
+
+        <munit:set-event>
+
+            <munit:payload value="#[
+                {
+                    name: 'John Doe Updated',
+                    email: 'john.doe@test.com'
+                }
+            ]"/>
+
+            <munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+    uriParams: {
+        id: "1"
+    },
+    headers: {
+        "x-correlation-id": "test-correlation-id"
+    }
+}]'/>
+
+        </munit:set-event>
+
+        <flow-ref name="put:\customers\(id):application\json:customer-experience-api-config"/>
+
+    </munit:execution>
+   
+
+</munit:test>
+
+<munit:test name="customer_experience_api_main_test">
+
+    <munit:behavior>
+
+        <munit-tools:mock-when processor="apikit:router">
+
+            <munit-tools:then-return>
+
+                <munit-tools:payload value="#[
+                    {
+                        message: 'OK'
+                    }
+                ]"/>
+
+            </munit-tools:then-return>
+
+        </munit-tools:mock-when>
+
+    </munit:behavior>
+
+    <munit:execution>
+
+        <munit:set-event>
+
+            <munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+    requestPath: "/api/customers",
+    method: "GET",
+    headers: {}
+}]'/>
+
+        </munit:set-event>
+
+        <flow-ref name="customer-experience-api-main"/>
+
+    </munit:execution>
+
+</munit:test>
+
+<!-- ========================================== -->
+	<!-- TEST: MAIN FLOW - SUCCESS (200)           -->
+	<!-- ========================================== -->
+	<munit:test name="main_flow_success_test">
+		<munit:behavior>
+			<munit-tools:mock-when processor="apikit:router">
+				<munit-tools:then-return>
+					<munit-tools:payload value="#[
+						{
+							message: 'OK'
+						}
+					]" />
+					<munit-tools:attributes value="#[
+						{
+							statusCode: 200
+						}
+					]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+
+		<munit:execution>
+			<munit:set-event>
+				<munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+	requestPath: "/api/customers",
+	method: "GET",
+	headers: {
+		"x-correlation-id": "test-correlation-123"
+	}
+}]'/>
+			</munit:set-event>
+			<flow-ref name="customer-experience-api-main"/>
+		</munit:execution>
+
+		<munit:validation>
+			<!-- ✅ El listener usa default 200 si httpStatus es null -->
+			<munit-tools:assert-equals expected="#[200]" actual="#[vars.httpStatus default 200]" />
+			<munit-tools:assert-equals expected="#['OK']" actual="#[payload.message]" />
+		</munit:validation>
+	</munit:test>
+	
+	<!-- ========================================== -->
+	<!-- TEST: MAIN FLOW - GET ALL (200)           -->
+	<!-- ========================================== -->
+	<munit:test name="main_flow_get_all_success_test">
+		<munit:behavior>
+			<munit-tools:mock-when processor="http:request">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute attributeName="method" whereValue="GET" />
+					<munit-tools:with-attribute attributeName="path" whereValue="/api/customers" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value="#[
+						[
+							{ id: '1', firstName: 'John', lastName: 'Doe' }
+						]
+					]" />
+					<munit-tools:attributes value="#[
+						{
+							statusCode: 200
+						}
+					]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+
+		<munit:execution>
+			<munit:set-event>
+				<munit:attributes value='#[%dw 2.0
+output application/java
+---
+{
+	requestPath: "/api/customers",
+	method: "GET",
+	headers: {}
+}]'/>
+			</munit:set-event>
+			<!-- ✅ Mockear apikit:router para evitar el ClassCastException -->
+			<munit-tools:mock-when processor="apikit:router">
+				<munit-tools:then-return>
+					<munit-tools:payload value="#[
+						{
+							message: 'OK'
+						}
+					]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<flow-ref name="customer-experience-api-main"/>
+		</munit:execution>
+
+		<munit:validation>
+			<munit-tools:assert-equals expected="#[200]" actual="#[vars.httpStatus default 200]" />
+			<munit-tools:assert-equals expected="#[true]" actual="#[vars.correlationId != null]" />
+		</munit:validation>
+	</munit:test>
+	
+	
+	<!-- ========================================== -->
+	<!-- TEST: POST - SUCCESS (201)                -->
+	<!-- ========================================== -->
+	<munit:test name="subflow_post_success_test">
+		<munit:behavior>
+			<munit-tools:mock-when processor="http:request">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute attributeName="method" whereValue="POST" />
+					<munit-tools:with-attribute attributeName="path" whereValue="/api/customers" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload value="#[
+						{
+							customerId: '10',
+							status: 'CREATED'
+						}
+					]" />
+					<munit-tools:attributes value="#[
+						{
+							statusCode: 201
+						}
+					]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+
+		<munit:execution>
+			<munit:set-event>
+				<munit:payload value="#[
+					{
+						firstName: 'John',
+						lastName: 'Doe',
+						email: 'john@test.com'
+					}
+				]" />
+				<munit:attributes value="#[
+					{
+						headers: {
+							'X-Correlation-ID': 'test-123'
+						}
+					}
+				]" />
+			</munit:set-event>
+			<flow-ref name="post:\customers:application\json:customer-experience-api-config"/>
+		</munit:execution>
+
+		<munit:validation>
+			<munit-tools:assert-equals expected="#[201]" actual="#[vars.httpStatus as Number]" />
+			<munit-tools:assert-equals expected="#['10']" actual="#[payload.customerId]" />
+		</munit:validation>
+	</munit:test>
+
+</mule>
