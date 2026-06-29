@@ -11,7 +11,7 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 	<http:request-config name="HTTP_Request_Process_Config">
 		<http:request-connection host="${process.host}" port="${process.port}" protocol="${process.protocol}" />
 	</http:request-config>
-	<api-gateway:autodiscovery apiId="20996208" flowRef="customer-experience-api-main" doc:name="Autodiscovery" />
+	
 	<error-handler name="globalExperienceErrorHandler">
 		<on-error-continue type="HTTP:INTERNAL_SERVER_ERROR, ANY">
 			<!-- Log para auditoría -->
